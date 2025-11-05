@@ -1,0 +1,180 @@
+
+local DiscordInvite = "https://discord.gg/84nUj3wZjn"
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local StarterGui = game:GetService("StarterGui")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+if playerGui:FindFirstChild("CorruptionDiscordGUI") then
+	playerGui.CorruptionDiscordGUI:Destroy()
+end
+
+local function tryCopyToClipboard(text)
+	local funcs = {setclipboard, set_clipboard, writeclipboard}
+	if syn and syn.set_clipboard then table.insert(funcs, syn.set_clipboard) end
+	for _, f in ipairs(funcs) do
+		if type(f) == "function" then
+			local ok = pcall(f, text)
+			if ok then return true end
+		end
+	end
+	return false
+end
+
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "CorruptionDiscordGUI"
+gui.ResetOnSpawn = false
+gui.Parent = playerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 350, 0, 180)
+frame.AnchorPoint = Vector2.new(0.5, 0.5)
+frame.Position = UDim2.new(0.5, 0, 0.5, 0)
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+frame.BorderSizePixel = 0
+frame.BackgroundTransparency = 0.05
+frame.Parent = gui
+
+local uicorner = Instance.new("UICorner", frame)
+uicorner.CornerRadius = UDim.new(0, 10)
+
+local stroke = Instance.new("UIStroke", frame)
+stroke.Color = Color3.fromRGB(255, 40, 40)
+stroke.Thickness = 2
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -20, 0, 35)
+title.Position = UDim2.new(0, 10, 0, 10)
+title.BackgroundTransparency = 1
+title.Text = "Join Discord For Script"
+title.Font = Enum.Font.Arcade
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextStrokeTransparency = 0
+title.TextStrokeColor3 = Color3.fromRGB(255, 40, 40)
+title.TextSize = 26
+title.Parent = frame
+
+local desc = Instance.new("TextLabel")
+desc.Size = UDim2.new(1, -20, 0, 70)
+desc.Position = UDim2.new(0, 10, 0, 45)
+desc.BackgroundTransparency = 1
+desc.TextWrapped = true
+desc.Text = "Corruption is a growing script and having more discord members supports and boosts our motivation and work. Copy the link below to get our FREE AND KEYLESS script:"
+desc.TextColor3 = Color3.fromRGB(225, 225, 225)
+desc.Font = Enum.Font.Gotham
+desc.TextSize = 14
+desc.Parent = frame
+
+local inviteFrame = Instance.new("Frame")
+inviteFrame.Size = UDim2.new(1, -20, 0, 36)
+inviteFrame.Position = UDim2.new(0, 10, 0, 120)
+inviteFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+inviteFrame.BorderSizePixel = 0
+inviteFrame.Parent = frame
+
+local inviteCorner = Instance.new("UICorner", inviteFrame)
+inviteCorner.CornerRadius = UDim.new(0, 8)
+
+local inviteStroke = Instance.new("UIStroke", inviteFrame)
+inviteStroke.Color = Color3.fromRGB(255, 40, 40)
+inviteStroke.Thickness = 1
+
+local inviteText = Instance.new("TextLabel")
+inviteText.Size = UDim2.new(1, -120, 1, 0)
+inviteText.Position = UDim2.new(0, 8, 0, 0)
+inviteText.BackgroundTransparency = 1
+inviteText.Text = DiscordInvite
+inviteText.Font = Enum.Font.Gotham
+inviteText.TextColor3 = Color3.fromRGB(240, 240, 240)
+inviteText.TextSize = 14
+inviteText.TextXAlignment = Enum.TextXAlignment.Left
+inviteText.Parent = inviteFrame
+
+local copyButton = Instance.new("TextButton")
+copyButton.Size = UDim2.new(0, 110, 0, 30)
+copyButton.Position = UDim2.new(1, -118, 0, 3)
+copyButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+copyButton.Text = "Copy Invite"
+copyButton.Font = Enum.Font.Arcade
+copyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+copyButton.TextStrokeTransparency = 0
+copyButton.TextStrokeColor3 = Color3.fromRGB(255, 40, 40)
+copyButton.TextSize = 18
+copyButton.Parent = inviteFrame
+
+local copyCorner = Instance.new("UICorner", copyButton)
+copyCorner.CornerRadius = UDim.new(0, 8)
+
+local copyStroke = Instance.new("UIStroke", copyButton)
+copyStroke.Color = Color3.fromRGB(255, 40, 40)
+copyStroke.Thickness = 1
+
+
+local copied = Instance.new("TextLabel")
+copied.Size = UDim2.new(0, 80, 0, 25)
+copied.Position = UDim2.new(0.5, -40, 1, 5)
+copied.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+copied.Text = "Copied!"
+copied.Font = Enum.Font.Arcade
+copied.TextColor3 = Color3.fromRGB(100, 255, 100)
+copied.TextSize = 16
+copied.Visible = false
+copied.Parent = frame
+
+local copiedCorner = Instance.new("UICorner", copied)
+copiedCorner.CornerRadius = UDim.new(0, 6)
+
+local UIS = game:GetService("UserInputService")
+local dragging, dragStart, startPos
+
+frame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = frame.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+UIS.InputChanged:Connect(function(input)
+	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = input.Position - dragStart
+		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+local function showCopied()
+	copied.Visible = true
+	copied.TextTransparency = 1
+	TweenService:Create(copied, TweenInfo.new(0.25), {TextTransparency = 0}):Play()
+	task.wait(1)
+	TweenService:Create(copied, TweenInfo.new(0.25), {TextTransparency = 1}):Play()
+	task.wait(0.25)
+	copied.Visible = false
+end
+
+copyButton.MouseButton1Click:Connect(function()
+	local ok = tryCopyToClipboard(DiscordInvite)
+	if ok then
+		showCopied()
+	else
+		pcall(function()
+			StarterGui:SetCore("ChatMakeSystemMessage", {Text = "Invite: " .. DiscordInvite})
+		end)
+		showCopied()
+	end
+end)
+
+frame.BackgroundTransparency = 1
+stroke.Thickness = 0
+TweenService:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
+	BackgroundTransparency = 0.05
+}):Play()
+TweenService:Create(stroke, TweenInfo.new(0.4), {Thickness = 2}):Play()
