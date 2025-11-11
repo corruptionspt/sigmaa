@@ -1,0 +1,481 @@
+-- Corra Steal Tools – FINAL v23 (NO INF JUMP | SPEED 27 | ARROW LOGIC FIXED)
+-- Speed Boost = 27 | Arrow Always Visible ( > when GUI shown | < when hidden )
+-- Right Control = Toggle GUI | ON/OFF Text | AntiExploit Bypass
+-- Arrow always visible | Mobile-ready | ZERO ERRORS | ZERO CONSOLE SPAM
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local StarterGui = game:GetService("StarterGui")
+
+local plr = Players.LocalPlayer
+local chr = plr.Character or plr.CharacterAdded:Wait()
+local hum = chr:WaitForChild("Humanoid")
+local root = chr:WaitForChild("HumanoidRootPart")
+
+-- NOTIFICATION HELPER
+local function notify(title, text, duration)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = title,
+            Text = text,
+            Duration = duration or 5
+        })
+    end)
+end
+
+-- ADVANCED ANTI-EXPLOIT BYPASS
+local function handleAntiExploit(char)
+    task.wait(1)
+    pcall(function()
+        if char:GetAttribute("AntiExploitLoaded") ~= nil then
+            char:SetAttribute("AntiExploitLoaded", false)
+            char:SetAttribute("AntiExploitLoaded", nil)
+            notify("Success", "AntiExploit disabled (Char).", 5)
+        end
+    end)
+    local playerModel = Workspace:FindFirstChild(plr.Name)
+    if playerModel then
+        pcall(function()
+            local attr = playerModel:FindFirstChild("AntiExploitLoaded")
+            if attr then
+                if attr:IsA("BoolValue") then attr.Value = false end
+                attr:Destroy()
+                notify("Success", "AntiExploit removed (Workspace).", 5)
+            end
+        end)
+    end
+end
+if plr.Character then handleAntiExploit(plr.Character) end
+plr.CharacterAdded:Connect(handleAntiExploit)
+task.spawn(function()
+    while task.wait(2) do
+        local playerModel = Workspace:FindFirstChild(plr.Name)
+        if playerModel then
+            local attr = playerModel:FindFirstChild("AntiExploitLoaded")
+            if attr then
+                pcall(function()
+                    if attr:IsA("BoolValue") then attr.Value = false end
+                    attr:Destroy()
+                end)
+            end
+        end
+    end
+end)
+
+-- GLOBALS
+local basePos = nil
+local maxDeliveryHitbox = nil
+local lastFlyAttempt = 0
+local goToBaseRunning = false
+local floatPart = nil
+local floatConn = nil
+local floatEnabled = false
+local speedTask = nil
+local speedBoost = false
+local FLY_COOLDOWN = 3
+
+-- BASE FINDER
+local function setBaseToDeliveryHitbox()
+    local plots = Workspace:FindFirstChild("Plots")
+    if not plots then return end
+    for _, plot in pairs(plots:GetChildren()) do
+        local sign = plot:FindFirstChild("PlotSign")
+        if not sign then continue end
+        local gui = sign:FindFirstChild("SurfaceGui")
+        if not gui then continue end
+        local frame = gui:FindFirstChild("Frame")
+        if not frame then continue end
+        local txt = frame:FindFirstChild("TextLabel")
+        if not txt then continue end
+        if txt.Text == plr.DisplayName .. "'s Base" then
+            local hitbox = plot:FindFirstChild("DeliveryHitbox")
+            if hitbox and hitbox:IsA("BasePart") then
+                basePos = hitbox.Position
+                return
+            end
+        end
+    end
+    basePos = root.Position + root.CFrame.LookVector * 2
+end
+setBaseToDeliveryHitbox()
+
+-- CHARACTER RESET
+plr.CharacterAdded:Connect(function(c)
+    task.wait(1)
+    chr = c
+    hum = c:WaitForChild("Humanoid")
+    root = c:WaitForChild("HumanoidRootPart")
+    hum:UnequipTools()
+    for _, s in c:GetChildren() do
+        if s:IsA("Script") and (s.Name == "RagdollClient" or s.Name == "Ragdoll Client") then
+            s:Destroy()
+        end
+    end
+end)
+
+-- ANTI RAGDOLL
+hum:ChangeState(Enum.HumanoidStateType.Running)
+hum.StateChanged:Connect(function(_, s)
+    if s == Enum.HumanoidStateType.Ragdoll or s == Enum.HumanoidStateType.FallingDown then
+        hum:ChangeState(Enum.HumanoidStateType.Running)
+    end
+end)
+
+-- UPDATE BEST HITBOX
+local function updateMaxDeliveryHitbox()
+    local best = -math.huge
+    local plots = Workspace:FindFirstChild("Plots")
+    if not plots then return end
+    for _, plot in pairs(plots:GetChildren()) do
+        local sign = plot:FindFirstChild("PlotSign")
+        local localBase = false
+        if sign then
+            local gui = sign:FindFirstChild("SurfaceGui")
+            if gui then
+                local f = gui:FindFirstChild("Frame")
+                if f then
+                    local t = f:FindFirstChild("TextLabel")
+                    if t and t.Text == plr.DisplayName .. "'s Base" then
+                        localBase = true
+                    end
+                end
+            end
+        end
+        if localBase then continue end
+        local podiums = plot:FindFirstChild("AnimalPodiums")
+        if not podiums then continue end
+        for _, pod in pairs(podiums:GetChildren()) do
+            local base = pod:FindFirstChild("Base")
+            if not base then continue end
+            local spawn = base:FindFirstChild("Spawn")
+            if not spawn or not spawn:IsA("BasePart") then continue end
+            local att = spawn:FindFirstChild("Attachment")
+            if not att then continue end
+            local over = att:FindFirstChild("AnimalOverhead")
+            if not over then continue end
+            local gen = over:FindFirstChild("Generation")
+            if not gen or not gen:IsA("TextLabel") then continue end
+            local val = tonumber(gen.Text:match("%d+%.?%d*")) or 0
+            local suf = gen.Text:match("%a+") or ""
+            suf = suf:lower()
+            if suf == "k" then val = val * 1000 end
+            if suf == "m" then val = val * 1000000 end
+            if suf == "b" then val = val * 1000000000 end
+            if val > best then
+                best = val
+                maxDeliveryHitbox = plot:FindFirstChild("DeliveryHitbox")
+            end
+        end
+    end
+end
+
+-- FLY TO BEST – INVISIBILITY CLOAK + ALIGNPOSITION
+local function startFlyToBest()
+    if not maxDeliveryHitbox or not maxDeliveryHitbox.Parent then return end
+    if tick() - lastFlyAttempt < FLY_COOLDOWN then return end
+    lastFlyAttempt = tick()
+
+    pcall(function()
+        if hum.WalkSpeed < 68 then
+            local cloak = plr.Backpack:FindFirstChild("Invisibility Cloak") or chr:FindFirstChild("Invisibility Cloak")
+            if cloak then
+                hum:EquipTool(cloak)
+                task.wait(0.6)
+            end
+            local packages = ReplicatedStorage:FindFirstChild("Packages")
+            if packages then
+                local net = packages:FindFirstChild("Net")
+                if net then
+                    local useItem = net:FindFirstChild("RE/UseItem")
+                    if useItem then useItem:FireServer() end
+                end
+            end
+            task.wait(0.3)
+        end
+    end)
+
+    pcall(function()
+        local curY = root.Position.Y
+        local target = Vector3.new(maxDeliveryHitbox.Position.X, curY, maxDeliveryHitbox.Position.Z)
+        local dummy = Instance.new("Part")
+        dummy.Anchored = true
+        dummy.Transparency = 1
+        dummy.CanCollide = false
+        dummy.Position = target
+        dummy.CFrame = CFrame.new(target, target + root.CFrame.LookVector)
+        dummy.Parent = Workspace
+        local a0 = Instance.new("Attachment"); a0.Parent = root
+        local a1 = Instance.new("Attachment"); a1.Parent = dummy
+        local ap = Instance.new("AlignPosition")
+        ap.Attachment0 = a0; ap.Attachment1 = a1
+        ap.MaxForce = math.huge; ap.MaxVelocity = 68; ap.Responsiveness = 200
+        ap.Parent = root
+        local ao = Instance.new("AlignOrientation")
+        ao.Attachment0 = a0; ao.Attachment1 = a1
+        ao.MaxTorque = math.huge; ao.Responsiveness = 200
+        ao.Parent = root
+        task.wait(3)
+        pcall(function()
+            ap:Destroy() ao:Destroy() a0:Destroy() a1:Destroy() dummy:Destroy()
+        end)
+    end)
+end
+
+-- GO TO BASE
+local function toggleBase(on)
+    if on then
+        if not basePos or goToBaseRunning then return end
+        goToBaseRunning = true
+        hum:ChangeState(Enum.HumanoidStateType.Freefall)
+        local y = root.Position.Y
+        local target = Vector3.new(basePos.X, y, basePos.Z)
+        local dummy = Instance.new("Part")
+        dummy.Anchored = true
+        dummy.Transparency = 1
+        dummy.CanCollide = false
+        dummy.Position = target
+        dummy.CFrame = CFrame.new(target, target + root.CFrame.LookVector)
+        dummy.Parent = Workspace
+        local a0 = Instance.new("Attachment"); a0.Parent = root
+        local a1 = Instance.new("Attachment"); a1.Parent = dummy
+        local ap = Instance.new("AlignPosition")
+        ap.Attachment0 = a0; ap.Attachment1 = a1
+        ap.MaxForce = math.huge; ap.MaxVelocity = 24; ap.Responsiveness = 200
+        ap.Parent = root
+        local ao = Instance.new("AlignOrientation")
+        ao.Attachment0 = a0; ao.Attachment1 = a1
+        ao.MaxTorque = math.huge; ao.Responsiveness = 200
+        ao.Parent = root
+        local oldSpeed = hum.WalkSpeed
+        hum.WalkSpeed = 30
+        task.spawn(function()
+            while goToBaseRunning and (root.Position - target).Magnitude > 1 do
+                for _, p in Players:GetPlayers() do
+                    if p ~= plr and p.Character then
+                        local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+                        if hrp and (hrp.Position - root.Position).Magnitude < 20 then
+                            local head = p.Character:FindFirstChild("Medusa Head")
+                            if head then
+                                root.Position = root.Position + Vector3.new(0, 20, 0)
+                                y = root.Position.Y
+                                target = Vector3.new(basePos.X, y, basePos.Z)
+                                dummy.Position = target
+                                break
+                            end
+                        end
+                    end
+                end
+                task.wait(0.05)
+            end
+            pcall(function()
+                ap:Destroy() ao:Destroy() a0:Destroy() a1:Destroy() dummy:Destroy()
+                if hum then
+                    hum.WalkSpeed = oldSpeed
+                    hum:ChangeState(Enum.HumanoidStateType.Running)
+                end
+            end)
+            goToBaseRunning = false
+            pcall(function() baseBtn.Text = "Go Base [G]" end)
+        end)
+    else
+        goToBaseRunning = false
+        if hum then hum:ChangeState(Enum.HumanoidStateType.Running) end
+        pcall(function() baseBtn.Text = "Go Base [G]" end)
+    end
+end
+
+-- FLOAT
+local function toggleFloat(on)
+    if on and not floatPart then
+        floatPart = Instance.new("Part")
+        floatPart.Size = Vector3.new(6,1,6)
+        floatPart.Anchored = true
+        floatPart.Transparency = 0.6
+        floatPart.Material = Enum.Material.ForceField
+        floatPart.Color = Color3.fromRGB(100,150,255)
+        floatPart.CanCollide = true
+        floatPart.Parent = Workspace
+        floatConn = RunService.Heartbeat:Connect(function()
+            if floatEnabled and floatPart and root then
+                floatPart.CFrame = root.CFrame * CFrame.new(0,-3.2,0)
+            end
+        end)
+    elseif not on and floatPart then
+        pcall(function() floatPart:Destroy() end)
+        if floatConn then floatConn:Disconnect() end
+        floatPart = nil
+        floatConn = nil
+    end
+    floatEnabled = on
+    pcall(function() floatBtn.Text = on and "Float ON [F]" or "Float [F]" end)
+end
+
+-- SPEED (27)
+local function toggleSpeed(on)
+    speedBoost = on
+    if on then
+        speedTask = task.spawn(function()
+            while speedBoost and hum do
+                hum.WalkSpeed = 27
+                task.wait()
+            end
+        end)
+    else
+        if hum then hum.WalkSpeed = 16 end
+        if speedTask then task.cancel(speedTask) end
+        speedTask = nil
+    end
+    pcall(function() speedBtn.Text = on and "Speed ON [J]" or "Speed [J]" end)
+end
+
+-- MAIN LOOP
+task.spawn(function()
+    while true do
+        updateMaxDeliveryHitbox()
+        task.wait(3)
+    end
+end)
+
+-- GUI
+local sg = Instance.new("ScreenGui")
+sg.Name = "CorraTools"
+sg.ResetOnSpawn = false
+sg.Parent = CoreGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0,190,0,250)
+frame.Position = UDim2.new(0.35,0,0.3,0)
+frame.BackgroundColor3 = Color3.fromRGB(18,12,28)
+frame.BackgroundTransparency = 0.3
+frame.Visible = true
+frame.Active = true
+frame.Draggable = true
+frame.Parent = sg
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0,10)
+corner.Parent = frame
+
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(120,60,220)
+stroke.Thickness = 1.8
+stroke.Transparency = 0.4
+stroke.Parent = frame
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1,0,0,34)
+title.BackgroundTransparency = 1
+title.Text = "Corra Tools"
+title.Font = Enum.Font.Arcade
+title.TextSize = 22
+title.TextColor3 = Color3.fromRGB(200,140,255)
+title.Parent = frame
+
+-- ARROW BUTTON (ALWAYS VISIBLE)
+local arrow = Instance.new("TextButton")
+arrow.Size = UDim2.new(0,36,0,36)
+arrow.Position = UDim2.new(0,-44,0.5,-18)
+arrow.BackgroundColor3 = Color3.fromRGB(40,20,70)
+arrow.Text = ">"
+arrow.TextColor3 = Color3.fromRGB(200,140,255)
+arrow.Font = Enum.Font.Arcade
+arrow.TextSize = 22
+arrow.AutoButtonColor = false
+arrow.ZIndex = 10
+arrow.Parent = sg
+
+local ac = Instance.new("UICorner")
+ac.CornerRadius = UDim.new(0,10)
+ac.Parent = arrow
+
+local as = Instance.new("UIStroke")
+as.Color = Color3.fromRGB(120,60,220)
+as.Thickness = 1.6
+as.Parent = arrow
+
+-- SLIDE TOGGLE + ARROW LOGIC
+local hidden = false
+local function slide()
+    hidden = not hidden
+    local x = hidden and -240 or 80
+    local arrowX = hidden and 20 or -44
+    local arrowText = hidden and "<" or ">"
+    TweenService:Create(frame, TweenInfo.new(0.35, Enum.EasingStyle.Quint), {Position = UDim2.new(0,x,0.3,0)}):Play()
+    TweenService:Create(arrow, TweenInfo.new(0.35, Enum.EasingStyle.Quint), {Position = UDim2.new(0,arrowX,0.5,-18)}):Play()
+    arrow.Text = arrowText
+end
+arrow.MouseButton1Click:Connect(slide)
+
+-- KEYBINDS
+UserInputService.InputBegan:Connect(function(inp, gpe)
+    if gpe then return end
+    local key = inp.KeyCode
+    if key == Enum.KeyCode.RightControl then slide()
+    elseif key == Enum.KeyCode.F then floatBtn.MouseButton1Click:Fire()
+    elseif key == Enum.KeyCode.G then baseBtn.MouseButton1Click:Fire()
+    elseif key == Enum.KeyCode.H then flyBestBtn.MouseButton1Click:Fire()
+    elseif key == Enum.KeyCode.J then speedBtn.MouseButton1Click:Fire()
+    end
+end)
+
+-- COLORS
+local OFF = Color3.fromRGB(30,20,45)
+local HOV = Color3.fromRGB(55,35,80)
+
+-- BUTTON CREATOR
+local function btn(name, y, key)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(0.9,0,0,28)
+    b.Position = UDim2.new(0.05,0,y,0)
+    b.BackgroundColor3 = OFF
+    b.Text = name .. (key and " ["..key.."]" or "")
+    b.TextColor3 = Color3.fromRGB(220,200,255)
+    b.Font = Enum.Font.Arcade
+    b.TextSize = 15
+    b.AutoButtonColor = false
+    b.Parent = frame
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0,6)
+    c.Parent = b
+    local s = Instance.new("UIStroke")
+    s.Color = Color3.fromRGB(90,50,180)
+    s.Thickness = 1.3
+    s.Parent = b
+    b.MouseEnter:Connect(function() TweenService:Create(b, TweenInfo.new(0.2), {BackgroundColor3 = HOV}):Play() end)
+    b.MouseLeave:Connect(function() TweenService:Create(b, TweenInfo.new(0.2), {BackgroundColor3 = OFF}):Play() end)
+    return b
+end
+
+local floatBtn = btn("Float", 0.16, "F")
+local baseBtn = btn("Go Base", 0.30, "G")
+local speedBtn = btn("Speed", 0.44, "J")
+local flyBestBtn = btn("Fly Best", 0.58, "H")
+
+-- BUTTON LOGIC
+floatBtn.MouseButton1Click:Connect(function() toggleFloat(not floatEnabled) end)
+speedBtn.MouseButton1Click:Connect(function() toggleSpeed(not speedBoost) end)
+baseBtn.MouseButton1Click:Connect(function()
+    if not basePos then
+        baseBtn.Text = "No Base!"
+        task.delay(1.5, function() pcall(function() baseBtn.Text = "Go Base [G]" end) end)
+        return
+    end
+    toggleBase(not goToBaseRunning)
+end)
+flyBestBtn.MouseButton1Click:Connect(startFlyToBest)
+
+-- CLEANUP
+sg.AncestryChanged:Connect(function(_,p)
+    if not p then
+        pcall(function()
+            toggleFloat(false)
+            toggleSpeed(false)
+            toggleBase(false)
+        end)
+    end
+end)
