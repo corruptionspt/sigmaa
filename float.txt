@@ -1,0 +1,156 @@
+--// Player + Services
+local player = game.Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
+local run = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+--// Float Part
+local floatPart = Instance.new("Part")
+floatPart.Size = Vector3.new(3, 0.2, 3)
+floatPart.Anchored = true
+floatPart.Transparency = 0.2
+floatPart.Color = Color3.fromRGB(255, 255, 255)
+floatPart.CanCollide = true
+floatPart.Name = "FloatPad"
+floatPart.Parent = workspace
+
+local floatEnabled = true
+local height = -3.1
+
+--// GUI
+local screenGui = Instance.new("ScreenGui", player.PlayerGui)
+screenGui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0, 180, 0, 120) -- REDUCED WIDTH
+frame.Position = UDim2.new(0.1, 0, 0.4, 0)
+frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+frame.BackgroundTransparency = 0.3
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+
+local corner = Instance.new("UICorner", frame)
+corner.CornerRadius = UDim.new(0, 12)
+
+-- Title
+local title = Instance.new("TextLabel", frame)
+title.Text = "Float Controller"
+title.Size = UDim2.new(1, -60, 0, 28)
+title.Position = UDim2.new(0, 10, 0, 5)
+title.BackgroundTransparency = 1
+title.TextScaled = true
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.GothamSemibold
+
+-- Minimize
+local minimize = Instance.new("TextButton", frame)
+minimize.Size = UDim2.new(0, 22, 0, 22)
+minimize.Position = UDim2.new(1, -50, 0, 5)
+minimize.Text = "-"
+minimize.TextScaled = true
+minimize.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+minimize.TextColor3 = Color3.fromRGB(255, 255, 255)
+Instance.new("UICorner", minimize).CornerRadius = UDim.new(0, 8)
+
+-- Close
+local close = Instance.new("TextButton", frame)
+close.Size = UDim2.new(0, 22, 0, 22)
+close.Position = UDim2.new(1, -25, 0, 5)
+close.Text = "X"
+close.TextScaled = true
+close.BackgroundColor3 = Color3.fromRGB(80, 40, 40)
+close.TextColor3 = Color3.fromRGB(255, 255, 255)
+Instance.new("UICorner", close).CornerRadius = UDim.new(0, 8)
+
+-- Toggle Float
+local toggle = Instance.new("TextButton", frame)
+toggle.Size = UDim2.new(0, 160, 0, 28)
+toggle.Position = UDim2.new(0.5, -80, 0, 40)
+toggle.Text = "Float: ON"
+toggle.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggle.TextScaled = true
+toggle.Font = Enum.Font.GothamBold
+Instance.new("UICorner", toggle).CornerRadius = UDim.new(0, 10)
+
+-- Buttons Holder
+local btnHolder = Instance.new("Frame", frame)
+btnHolder.Size = UDim2.new(0, 160, 0, 40)
+btnHolder.Position = UDim2.new(0.5, -80, 0, 75)
+btnHolder.BackgroundTransparency = 1
+
+local up = Instance.new("TextButton", btnHolder)
+up.Size = UDim2.new(0.5, -5, 1, 0)
+up.Position = UDim2.new(0, 0, 0, 0)
+up.Text = "▲"
+up.TextScaled = true
+up.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+up.TextColor3 = Color3.fromRGB(255, 255, 255)
+Instance.new("UICorner", up).CornerRadius = UDim.new(0, 10)
+
+local down = Instance.new("TextButton", btnHolder)
+down.Size = UDim2.new(0.5, -5, 1, 0)
+down.Position = UDim2.new(0.5, 5, 0, 0)
+down.Text = "▼"
+down.TextScaled = true
+down.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+down.TextColor3 = Color3.fromRGB(255, 255, 255)
+Instance.new("UICorner", down).CornerRadius = UDim.new(0, 10)
+
+-- Minimize Logic
+local minimized = false
+minimize.MouseButton1Click:Connect(function()
+	minimized = not minimized
+	if minimized then
+		frame.Size = UDim2.new(0, 180, 0, 35)
+	else
+		frame.Size = UDim2.new(0, 180, 0, 120)
+	end
+end)
+
+-- Close Button
+close.MouseButton1Click:Connect(function()
+	frame:Destroy()
+end)
+
+-- Toggle Float
+toggle.MouseButton1Click:Connect(function()
+	floatEnabled = not floatEnabled
+	toggle.Text = "Float: " .. (floatEnabled and "ON" or "OFF")
+
+	if not floatEnabled then
+		floatPart.CFrame = CFrame.new(0, -500, 0)
+	end
+end)
+
+-- Smooth Player Move
+local function movePlayer(offsetY)
+	if not hrp then return end
+
+	local newCFrame = hrp.CFrame + Vector3.new(0, offsetY, 0)
+
+	local tween = TweenService:Create(
+		hrp,
+		TweenInfo.new(0.15, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+		{CFrame = newCFrame}
+	)
+
+	tween:Play()
+end
+
+up.MouseButton1Click:Connect(function()
+	movePlayer(2)
+end)
+
+down.MouseButton1Click:Connect(function()
+	movePlayer(-2)
+end)
+
+-- Float Follow
+run.RenderStepped:Connect(function()
+	if floatEnabled and hrp then
+		floatPart.CFrame = hrp.CFrame * CFrame.new(0, height, 0)
+	end
+end)
