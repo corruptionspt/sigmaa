@@ -1,0 +1,102 @@
+--// SERVICES
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+
+--// PLAYER
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local hum = char:WaitForChild("Humanoid")
+local hrp = char:WaitForChild("HumanoidRootPart")
+
+--// VARIABLES
+local SPEED = 28
+local speedEnabled = false
+
+-- Store the original WalkSpeed
+local originalSpeed = hum.WalkSpeed
+
+--// GUI
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.ResetOnSpawn = false
+
+local main = Instance.new("Frame", gui)
+main.Size = UDim2.new(0, 170, 0, 90)
+main.Position = UDim2.new(0.1, 0, 0.3, 0)
+main.BackgroundColor3 = Color3.fromRGB(20,20,20)
+main.BackgroundTransparency = 0.1
+main.BorderSizePixel = 0
+main.Active = true
+main.Draggable = true
+
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 14)
+
+local stroke = Instance.new("UIStroke", main)
+stroke.Color = Color3.fromRGB(80,80,80)
+stroke.Thickness = 2
+stroke.Transparency = 0.25
+
+local title = Instance.new("TextLabel", main)
+title.Size = UDim2.new(1, 0, 0, 28)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.Text = "⚡ Speed Boost"
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.TextSize = 18
+
+local speedBtn = Instance.new("TextButton", main)
+speedBtn.Size = UDim2.new(1, -20, 0, 40)
+speedBtn.Position = UDim2.new(0, 10, 0, 40)
+speedBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+speedBtn.Font = Enum.Font.GothamBold
+speedBtn.Text = "OFF"
+speedBtn.TextColor3 = Color3.fromRGB(255,255,255)
+speedBtn.TextSize = 16
+
+Instance.new("UICorner", speedBtn).CornerRadius = UDim.new(0, 10)
+
+local btnStroke = Instance.new("UIStroke", speedBtn)
+btnStroke.Color = Color3.fromRGB(0,255,0)
+btnStroke.Thickness = 2
+btnStroke.Transparency = 1
+
+--// SPEED TOGGLE FUNCTION
+speedBtn.MouseButton1Click:Connect(function()
+	speedEnabled = not speedEnabled
+
+	if speedEnabled then
+		speedBtn.BackgroundColor3 = Color3.fromRGB(0,170,0)
+		speedBtn.Text = "ON"
+		btnStroke.Transparency = 0
+	else
+		speedBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+		speedBtn.Text = "OFF"
+		btnStroke.Transparency = 1
+		-- Restore original WalkSpeed
+		hum.WalkSpeed = originalSpeed
+	end
+end)
+
+--// CUSTOM MOVEMENT
+hum.WalkSpeed = 0
+
+RunService.Heartbeat:Connect(function(dt)
+	if speedEnabled and hum and hrp then
+		hum.WalkSpeed = 0
+
+		local dir = hum.MoveDirection
+		local vel = hrp.AssemblyLinearVelocity
+
+		local newX = 0
+		local newZ = 0
+
+		if dir.Magnitude > 0 then
+			newX = dir.Unit.X * SPEED
+			newZ = dir.Unit.Z * SPEED
+		end
+
+		-- Keep jump velocity
+		hrp.AssemblyLinearVelocity = Vector3.new(newX, vel.Y, newZ)
+	end
+end)
+print("fuck you")
